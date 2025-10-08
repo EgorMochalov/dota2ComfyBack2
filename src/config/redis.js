@@ -4,6 +4,7 @@ const config = require('./config');
 require('dotenv').config();
 class RedisClient {
   constructor() {
+    console.log(process.env.REDIS_URL)
     const redisConfig = {
           // Конфиг для внешнего Redis (Redis Cloud, Upstash и т.д.)
           url: process.env.REDIS_URL,
