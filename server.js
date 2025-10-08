@@ -20,7 +20,7 @@ const corsOptions = {
     
     const allowedOrigins = [
       process.env.FRONTEND_URL,
-      'http://localhost:3000',
+      'http://localhost:3000', 
       'https://your-frontend-app.onrender.com' // замените на ваш фронтенд URL
     ];
     
