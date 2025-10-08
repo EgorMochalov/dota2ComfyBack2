@@ -159,38 +159,80 @@ app.use('*', (req, res) => {
 // Запуск сервера
 const startServer = async () => {
   try {
-    // Проверяем подключение к базе данных
-    await sequelize.authenticate();
-    console.log('✅ Database connection established');
+    console.log('🔄 Attempting to connect to database...');
+    
+    // Добавляем повторные попытки подключения к БД
+    let dbConnected = false;
+    let dbRetries = 5;
+    
+    while (dbRetries > 0 && !dbConnected) {
+      try {
+        await sequelize.authenticate();
+        dbConnected = true;
+        console.log('✅ Database connection established');
+      } catch (dbError) {
+        console.error(`❌ Database connection failed. Retries left: ${dbRetries - 1}`, dbError.message);
+        dbRetries--;
+        
+        if (dbRetries > 0) {
+          console.log('🔄 Retrying in 5 seconds...');
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+      }
+    }
+
+    if (!dbConnected) {
+      throw new Error('Unable to connect to database after multiple attempts');
+    }
 
     // В продакшене запускаем миграции
     if (config.nodeEnv === 'production') {
       try {
-        // await sequelize.sync({ force: false }); // Не используем force в продакшене!
-        console.log('✅ Database synced for production');
+        console.log('🔄 Running database migrations...');
+        // Не используем sync в продакшене! Вместо этого используем миграции
+        const { execSync } = require('child_process');
+        execSync('npx sequelize-cli db:migrate', { stdio: 'inherit' });
+        console.log('✅ Database migrations completed');
       } catch (migrationError) {
         console.error('❌ Database migration failed:', migrationError);
+        // Не прерываем запуск, если миграции не удались
       }
     }
 
-    // Проверяем подключение к Redis
-    await redisClient.connect();
-    console.log('✅ Redis connection established');
+    // Подключение к Redis с повторными попытками
+    let redisConnected = false;
+    let redisRetries = 3;
+    
+    while (redisRetries > 0 && !redisConnected) {
+      try {
+        await redisClient.connect();
+        redisConnected = true;
+        console.log('✅ Redis connection established');
+      } catch (redisError) {
+        console.error(`❌ Redis connection failed. Retries left: ${redisRetries - 1}`);
+        redisRetries--;
+        
+        if (redisRetries > 0) {
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        } else {
+          console.warn('⚠️  Continuing without Redis connection');
+        }
+      }
+    }
 
-    // Запускаем фоновые задачи только если не в тестовом режиме
+    // Запускаем фоновые задачи
     if (config.nodeEnv !== 'test') {
       searchStatusCleanup.start();
       onlineStatusCleanup.start();
       console.log('✅ Background jobs started');
     }
 
-    const PORT = config.port;
+    const PORT = process.env.PORT || config.port;
     server.listen(PORT, () => {
       console.log('🚀 Server started successfully');
       console.log(`📍 Environment: ${config.nodeEnv}`);
       console.log(`📍 Port: ${PORT}`);
-      console.log(`📍 Health check: http://localhost:${PORT}/health`);
-      console.log(`📍 API Base URL: http://localhost:${PORT}/api`);
+      console.log(`📍 Health check: https://your-app.onrender.com/health`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

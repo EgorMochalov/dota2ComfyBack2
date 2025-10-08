@@ -1,4 +1,4 @@
-// config/database.js - ОБНОВЛЯЕМ
+// config/database.js - ИСПРАВЛЕННАЯ ВЕРСИЯ
 require('dotenv').config();
 
 module.exports = {
@@ -11,17 +11,8 @@ module.exports = {
     dialect: 'postgres',
     logging: console.log,
   },
-  test: {
-    username: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'password',
-    database: process.env.DB_NAME_TEST || 'dota2_teammate_finder_test',
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    dialect: 'postgres',
-    logging: false,
-  },
   production: {
-    use_env_variable: 'DATABASE_URL', // Render предоставляет эту переменную
+    use_env_variable: 'DATABASE_URL',
     dialect: 'postgres',
     logging: false,
     dialectOptions: {
@@ -30,7 +21,9 @@ module.exports = {
         rejectUnauthorized: false
       }
     },
-    // Добавляем настройки пула соединений для продакшена
+    // Добавляем настройки для лучшей совместимости
+    ssl: true,
+    native: false,
     pool: {
       max: 5,
       min: 0,
