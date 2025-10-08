@@ -5,9 +5,9 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const path = require('path');
 const { sequelize } = require('./src/models');
-const config = require('./config/config');
-const errorHandler = require('./middleware/errorHandler');
-const redisClient = require('./config/redis');
+const config = require('./src/config/config');
+const errorHandler = require('./src/middleware/errorHandler');
+const redisClient = require('./src/config/redis');
 
 const app = express();
 const server = http.createServer(app);
