@@ -9,9 +9,14 @@ class RedisClient {
       url: 'rediss://default:AScYAAIncDJlYjZjNzAxMDkxMzE0ZDEyYTYzZWYxODhhNzg2Zjg3Y3AyMTAwMDg@first-serval-10008.upstash.io:6379',
       socket: {
         tls: true,
-        rejectUnauthorized: false
+        rejectUnauthorized: false,
+        // Явно указываем хост и порт
+        host: 'first-serval-10008.upstash.io',
+        port: 6379,
+        connectTimeout: 30000,
+        lazyConnect: true
       }
-    };
+    }
 
     this.client = redis.createClient(redisConfig);
 
