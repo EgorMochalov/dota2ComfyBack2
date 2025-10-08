@@ -9,6 +9,15 @@ const config = require('./src/config/config');
 const errorHandler = require('./src/middleware/errorHandler');
 const redisClient = require('./src/config/redis');
 
+
+// Импорт маршрутов
+const routes = require('./src/routes');
+
+// Импорт сервисов
+const onlineStatusService = require('./src/services/onlineStatusService');
+const searchStatusCleanup = require('./src/jobs/searchStatusCleanup');
+const onlineStatusCleanup = require('./src/jobs/onlineStatusCleanup');
+
 const app = express();
 const server = http.createServer(app);
 
