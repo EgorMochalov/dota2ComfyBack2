@@ -159,43 +159,70 @@ app.use('*', (req, res) => {
 // Запуск сервера
 const startServer = async () => {
   try {
-    console.log('🔄 Attempting to connect to database...');
+    console.log('🚀 Starting server initialization...');
     
-    // Добавляем повторные попытки подключения к БД
+    // Подключение к базе данных
     let dbConnected = false;
     let dbRetries = 5;
     
     while (dbRetries > 0 && !dbConnected) {
       try {
+        console.log(`🔄 Attempting database connection (${6 - dbRetries}/5)...`);
         await sequelize.authenticate();
         dbConnected = true;
         console.log('✅ Database connection established');
       } catch (dbError) {
-        console.error(`❌ Database connection failed. Retries left: ${dbRetries - 1}`, dbError.message);
+        console.error(`❌ Database connection failed: ${dbError.message}`);
         dbRetries--;
-        
         if (dbRetries > 0) {
-          console.log('🔄 Retrying in 5 seconds...');
-          await new Promise(resolve => setTimeout(resolve, 5000));
+          console.log(`🔄 Retrying in 3 seconds... (${dbRetries} attempts left)`);
+          await new Promise(resolve => setTimeout(resolve, 3000));
         }
       }
     }
 
     if (!dbConnected) {
-      throw new Error('Unable to connect to database after multiple attempts');
+      throw new Error('Unable to connect to database after 5 attempts');
     }
 
-    // В продакшене запускаем миграции
+    // ПРОБЛЕМА: ТАБЛИЦЫ НЕ СУЩЕСТВУЮТ - СОЗДАЕМ ИХ
     if (config.nodeEnv === 'production') {
       try {
-        console.log('🔄 Running database migrations...');
-        // Не используем sync в продакшене! Вместо этого используем миграции
-        const { execSync } = require('child_process');
-        execSync('npx sequelize-cli db:migrate', { stdio: 'inherit' });
-        console.log('✅ Database migrations completed');
-      } catch (migrationError) {
-        console.error('❌ Database migration failed:', migrationError);
-        // Не прерываем запуск, если миграции не удались
+        console.log('🔄 Checking if database tables exist...');
+        
+        // Проверяем существование таблицы users
+        const tableCheck = await sequelize.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name = 'users'
+          );
+        `);
+        
+        const usersTableExists = tableCheck[0][0].exists;
+        
+        if (!usersTableExists) {
+          console.log('📋 Tables not found. Creating database structure...');
+          
+          // Синхронизируем все модели (создаем таблицы)
+          await sequelize.sync({ force: false }); // force: false - не перезаписывает существующие данные
+          console.log('✅ Database tables created successfully');
+          
+          // Запускаем сиды для тестовых данных
+          console.log('🔄 Seeding initial data...');
+          try {
+            const seed = require('./seeders/seed');
+            await seed();
+            console.log('✅ Initial data seeded successfully');
+          } catch (seedError) {
+            console.warn('⚠️  Seed data failed, but continuing:', seedError.message);
+          }
+        } else {
+          console.log('✅ Database tables already exist');
+        }
+      } catch (syncError) {
+        console.error('❌ Database synchronization failed:', syncError);
+        // Продолжаем работу, даже если синхронизация не удалась
       }
     }
 
