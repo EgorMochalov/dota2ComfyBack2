@@ -1,7 +1,7 @@
 // config/redis.js
 const redis = require('redis');
 const config = require('./config');
-
+require('dotenv').config();
 class RedisClient {
   constructor() {
     const redisConfig = {
