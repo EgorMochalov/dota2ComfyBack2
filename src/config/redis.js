@@ -4,8 +4,7 @@ const config = require('./config');
 
 class RedisClient {
   constructor() {
-    const redisConfig = config.nodeEnv === 'production' 
-      ? {
+    const redisConfig = {
           // Конфиг для внешнего Redis (Redis Cloud, Upstash и т.д.)
           url: process.env.REDIS_URL,
           socket: {
@@ -13,14 +12,6 @@ class RedisClient {
             rejectUnauthorized: false
           }
         }
-      : {
-          // Конфиг для локального Redis
-          socket: {
-            host: config.redis.host,
-            port: config.redis.port,
-          },
-          password: config.redis.password,
-        };
 
     this.client = redis.createClient(redisConfig);
 
