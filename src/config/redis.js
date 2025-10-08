@@ -6,16 +6,12 @@ class RedisClient {
   constructor() {
     console.log(process.env.REDIS_URL)
     const redisConfig = {
-      host: 'first-serval-10008.upstash.io',
-      port: 6379,
-      username: 'default',
-      password: 'AScYAAIncDJlYjZjNzAxMDkxMzE0ZDEyYTYzZWYxODhhNzg2Zjg3Y3AyMTAwMDg',
-      tls: {
+      url: 'rediss://default:AScYAAIncDJlYjZjNzAxMDkxMzE0ZDEyYTYzZWYxODhhNzg2Zjg3Y3AyMTAwMDg@first-serval-10008.upstash.io:6379',
+      socket: {
+        tls: true,
         rejectUnauthorized: false
-      },
-      retryDelayOnFailover: 100,
-      maxRetriesPerRequest: 3
-    }
+      }
+    };
 
     this.client = redis.createClient(redisConfig);
 
