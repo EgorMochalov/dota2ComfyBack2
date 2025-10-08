@@ -12,23 +12,12 @@ module.exports = {
     logging: console.log,
   },
   production: {
-    use_env_variable: 'DATABASE_URL',
+    username: 'dota2_user',
+    password: 'dota2_user',
+    database: 'dota2_teammate_finder',
+    host: 'dpg-d3j39f3e5dus739h3b3g-a',
+    port: 5432,
     dialect: 'postgres',
-    logging: false,
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    },
-    // Добавляем настройки для лучшей совместимости
-    ssl: true,
-    native: false,
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
-    }
+    logging: console.log
   }
 };
