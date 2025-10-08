@@ -18,6 +18,8 @@ const onlineStatusService = require('./src/services/onlineStatusService');
 const searchStatusCleanup = require('./src/jobs/searchStatusCleanup');
 const onlineStatusCleanup = require('./src/jobs/onlineStatusCleanup');
 
+const chatHandlers = require('./src/sockets/chatHandlers');
+
 const app = express();
 const server = http.createServer(app);
 
