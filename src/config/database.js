@@ -1,4 +1,4 @@
-// config/database.js - ИСПРАВЛЕННАЯ ВЕРСИЯ
+// config/database.js - ОБНОВЛЕННАЯ ВЕРСИЯ
 require('dotenv').config();
 
 module.exports = {
@@ -12,12 +12,31 @@ module.exports = {
     logging: console.log,
   },
   production: {
-    username: 'dota2_user',
-    password: 'dota2_user',
-    database: 'dota2_teammate_finder',
-    host: 'dpg-d3j39f3e5dus739h3b3g-a',
-    port: 5432,
+    // Используем явные параметры вместо DATABASE_URL для лучшего контроля
+    username: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
     dialect: 'postgres',
-    logging: console.log
+    logging: false,
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    },
+    ssl: true,
+    // Дополнительные настройки для стабильности
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000,
+      evict: 10000
+    },
+    retry: {
+      max: 3
+    }
   }
 };
