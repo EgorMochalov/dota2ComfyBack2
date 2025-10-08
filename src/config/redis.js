@@ -6,16 +6,15 @@ class RedisClient {
   constructor() {
     console.log(process.env.REDIS_URL)
     const redisConfig = {
-      url: 'rediss://default:AScYAAIncDJlYjZjNzAxMDkxMzE0ZDEyYTYzZWYxODhhNzg2Zjg3Y3AyMTAwMDg@first-serval-10008.upstash.io:6379',
       socket: {
-        tls: true,
-        rejectUnauthorized: false,
-        // Явно указываем хост и порт
         host: 'first-serval-10008.upstash.io',
         port: 6379,
-        connectTimeout: 30000,
-        lazyConnect: true
-      }
+        tls: true,
+        rejectUnauthorized: false
+      },
+      username: 'default',
+      password: 'AScYAAIncDJlYjZjNzAxMDkxMzE0ZDEyYTYzZWYxODhhNzg2Zjg3Y3AyMTAwMDg',
+      pingInterval: 10000, // поддерживает соединение активным
     }
 
     this.client = redis.createClient(redisConfig);
