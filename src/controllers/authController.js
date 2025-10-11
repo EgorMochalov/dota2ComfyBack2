@@ -9,6 +9,7 @@ const { sequelize } = require('../models');
 class AuthController {
   // Вспомогательный метод для формирования ответа с пользователем
   formatUserResponse(user) {
+    console.log(user)
     return {
       id: user.id,
       email: user.email,
