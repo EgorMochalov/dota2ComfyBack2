@@ -1,6 +1,6 @@
 // controllers/applicationController.js
 const { TeamApplication, Team, User, Notification, ChatRoom, ChatRoomMember, sequelize } = require('../models');
-const redisClient = require('../config/redis');
+const cacheService = require('../services/cacheService');
 
 class ApplicationController {
   async applyToTeam(req, res, next) {
@@ -279,8 +279,6 @@ class ApplicationController {
 
       await cacheService.invalidateUserCache(application.user_id);
       await cacheService.invalidateTeamCache(application.Team.id);
-      // Инвалидируем кэш
-      await redisClient.del(`user:${application.user_id}`);
 
       res.json({
         message: `Application ${status} successfully`,

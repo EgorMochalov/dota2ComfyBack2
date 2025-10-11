@@ -220,7 +220,6 @@ class TeamController {
 
       await team.update(updateData);
       await cacheService.invalidateTeamCache(teamId);
-      await redisClient.del(`team:${teamId}`);
 
       res.json({
         message: 'Team updated successfully',
@@ -557,7 +556,6 @@ class TeamController {
       await transaction.commit();
 
       await cacheService.invalidateTeamMembersCache(teamId, [currentCaptainId, newCaptainId]);
-      await redisClient.del(`team:${teamId}`);
 
       res.json({
         message: 'Captaincy transferred successfully'

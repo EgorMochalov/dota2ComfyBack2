@@ -1,6 +1,6 @@
 // controllers/invitationController.js
 const { Invitation, Team, User, Notification, ChatRoom, ChatRoomMember, sequelize } = require('../models');
-const redisClient = require('../config/redis');
+const cacheService = require('../services/cacheService');
 
 class InvitationController {
   async inviteUser(req, res, next) {
@@ -233,8 +233,6 @@ class InvitationController {
 
       await cacheService.invalidateUserCache(userId);
       await cacheService.invalidateTeamCache(invitation.Team.id);
-      // Инвалидируем кэш
-      await redisClient.del(`user:${userId}`);
 
       res.json({
         message: `Invitation ${status} successfully`,

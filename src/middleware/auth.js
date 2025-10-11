@@ -18,7 +18,13 @@ const authMiddleware = async (req, res, next) => {
     
     const user = await User.findByPk(decoded.userId, {
       attributes: { exclude: ['password_hash'] },
-      include: ['team']
+      include: [
+        {
+          model: Team,
+          as: 'team',
+          attributes: ['id', 'name', 'avatar_url', 'region']
+        }
+      ]
     });
 
     if (!user) {

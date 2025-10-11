@@ -4,6 +4,7 @@ const uploadService = require('../services/uploadService');
 const onlineStatusService = require('../services/onlineStatusService');
 const redisClient = require('../config/redis');
 const { Op } = require('sequelize');
+const cacheService = require('../services/cacheService');
 class UserController {
   async getProfile(req, res, next) {
     try {
@@ -124,8 +125,6 @@ class UserController {
       await user.update(updateData);
 
       await cacheService.invalidateUserCache(userId);
-      // Инвалидируем кэш
-      await redisClient.del(`user:${userId}`);
 
       res.json({
         message: 'Profile updated successfully',
@@ -168,7 +167,6 @@ class UserController {
       });
 
       await cacheService.invalidateUserCache(userId);
-      await redisClient.del(`user:${userId}`);
 
       res.json({
         message: `Search status updated to ${is_searching ? 'active' : 'inactive'}`,
