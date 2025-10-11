@@ -123,6 +123,7 @@ class UserController {
 
       await user.update(updateData);
 
+      await cacheService.invalidateUserCache(userId);
       // Инвалидируем кэш
       await redisClient.del(`user:${userId}`);
 
@@ -166,6 +167,7 @@ class UserController {
         search_status_updated_at: new Date()
       });
 
+      await cacheService.invalidateUserCache(userId);
       await redisClient.del(`user:${userId}`);
 
       res.json({

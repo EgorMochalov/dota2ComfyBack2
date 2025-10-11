@@ -231,6 +231,8 @@ class InvitationController {
 
       await transaction.commit();
 
+      await cacheService.invalidateUserCache(userId);
+      await cacheService.invalidateTeamCache(invitation.Team.id);
       // Инвалидируем кэш
       await redisClient.del(`user:${userId}`);
 

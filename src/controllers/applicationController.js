@@ -130,6 +130,8 @@ class ApplicationController {
         message: `${req.user.username} has cancelled their application`
       });
 
+      await cacheService.invalidateUserCache(userId);
+
       res.json({
         message: 'Application cancelled successfully'
       });
@@ -275,6 +277,8 @@ class ApplicationController {
 
       await transaction.commit();
 
+      await cacheService.invalidateUserCache(application.user_id);
+      await cacheService.invalidateTeamCache(application.Team.id);
       // Инвалидируем кэш
       await redisClient.del(`user:${application.user_id}`);
 

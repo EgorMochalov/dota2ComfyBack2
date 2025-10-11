@@ -4,6 +4,7 @@ const { Op } = require('sequelize');
 const onlineStatusService = require('../services/onlineStatusService');
 const uploadService = require('../services/uploadService');
 const redisClient = require('../config/redis');
+const cacheService = require('../services/cacheService');
 
 class TeamController {
   async createTeam(req, res, next) {
@@ -44,6 +45,8 @@ class TeamController {
       }, { transaction });
 
       await transaction.commit();
+
+      await cacheService.invalidateUserCache(captainId);
 
       res.status(201).json({
         message: 'Team created successfully',
@@ -216,6 +219,7 @@ class TeamController {
       }
 
       await team.update(updateData);
+      await cacheService.invalidateTeamCache(teamId);
       await redisClient.del(`team:${teamId}`);
 
       res.json({
@@ -441,6 +445,8 @@ class TeamController {
 
       await transaction.commit();
 
+      await cacheService.invalidateTeamMembersCache(teamId, [userId]);
+
       res.json({
         message: 'You have left the team'
       });
@@ -506,6 +512,8 @@ class TeamController {
 
       await transaction.commit();
 
+      await cacheService.invalidateTeamMembersCache(teamId, [memberId]);
+
       res.json({
         message: 'Member kicked from the team'
       });
@@ -548,6 +556,7 @@ class TeamController {
       await team.update({ captain_id: newCaptainId }, { transaction });
       await transaction.commit();
 
+      await cacheService.invalidateTeamMembersCache(teamId, [currentCaptainId, newCaptainId]);
       await redisClient.del(`team:${teamId}`);
 
       res.json({
