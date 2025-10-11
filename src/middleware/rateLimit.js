@@ -31,7 +31,7 @@ const rateLimit = (windowMs = 60000, maxRequests = 100) => {
 };
 
 // Более строгий лимит для аутентификации
-const authRateLimit = rateLimit(900000, 8); // 5 попыток за 15 минут
+const authRateLimit = rateLimit(900000, 100000); // 5 попыток за 15 минут
 
 // Стандартный лимит для API
 const apiRateLimit = rateLimit(60000, 100); // 100 запросов в минуту
