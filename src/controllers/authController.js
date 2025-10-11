@@ -1,43 +1,20 @@
-// controllers/authController.js - ПОЛНОСТЬЮ ОБНОВЛЯЕМ
-const { User, Team } = require('../models');
+// controllers/authController.js
+const { User, sequelize } = require('../models');
 const { generateToken } = require('../utils/jwt');
 const { hashPassword, comparePassword, validatePassword } = require('../utils/password');
 const onlineStatusService = require('../services/onlineStatusService');
 const redisClient = require('../config/redis');
-const { sequelize } = require('../models');
+const { Op } = require('sequelize');
 
 class AuthController {
-  // Вспомогательный метод для формирования ответа с пользователем
-  formatUserResponse(user) {
-    console.log(user)
-    return {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      region: user.region,
-      avatar_url: user.avatar_url,
-      game_modes: user.game_modes,
-      mmr_rating: user.mmr_rating,
-      preferred_roles: user.preferred_roles,
-      about_me: user.about_me,
-      tags: user.tags,
-      is_searching: user.is_searching,
-      team_id: user.team_id,
-      last_online: user.last_online,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      team: user.team // Включаем информацию о команде
-    };
-  }
-
   async register(req, res, next) {
     try {
       const { email, username, password, region } = req.body;
-
+      console.log(email)
       // Проверяем существующего пользователя
       const existingUser = await User.findOne({
         where: {
-          [sequelize.Op.or]: [{ email }, { username }]
+          [Op.or]: [{ email }, { username }]
         }
       });
 
@@ -71,31 +48,28 @@ class AuthController {
         tags: []
       });
 
-      // Получаем пользователя с полной информацией (включая команду)
-      const userWithTeam = await User.findByPk(user.id, {
-        attributes: { exclude: ['password_hash'] },
-        include: [
-          {
-            model: Team,
-            as: 'team',
-            attributes: ['id', 'name', 'avatar_url', 'region']
-          }
-        ]
-      });
-
       // Генерируем токен
-      const token = generateToken(userWithTeam.id);
+      const token = generateToken(user.id);
 
       // Устанавливаем онлайн статус
-      await onlineStatusService.setUserOnline(userWithTeam.id, {
-        username: userWithTeam.username,
-        region: userWithTeam.region
+      await onlineStatusService.setUserOnline(user.id, {
+        username: user.username,
+        region: user.region
       });
 
       res.status(201).json({
         message: 'User registered successfully',
         token,
-        user: this.formatUserResponse(userWithTeam)
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          region: user.region,
+          avatar_url: user.avatar_url,
+          is_searching: user.is_searching,
+          team_id: user.team_id,
+          last_online: user.last_online
+        }
       });
     } catch (error) {
       next(error);
@@ -106,18 +80,7 @@ class AuthController {
     try {
       const { email, password } = req.body;
 
-      // Ищем пользователя с информацией о команде
-      const user = await User.findOne({ 
-        where: { email },
-        include: [
-          {
-            model: Team,
-            as: 'team',
-            attributes: ['id', 'name', 'avatar_url', 'region']
-          }
-        ]
-      });
-      
+      const user = await User.findOne({ where: { email } });
       if (!user) {
         return res.status(401).json({
           error: 'Invalid credentials',
@@ -135,24 +98,33 @@ class AuthController {
 
       const token = generateToken(user.id);
 
-      // Обновляем last_online с серверным временем
-      await user.update({ 
-        last_online: sequelize.fn('NOW') 
-      });
-      
+      // Обновляем last_online и онлайн статус
+      await user.update({ last_online: new Date() });
       await onlineStatusService.setUserOnline(user.id, {
         username: user.username,
         region: user.region
       });
-
-      // Исключаем password_hash из ответа
-      const userWithoutPassword = { ...user.toJSON() };
-      delete userWithoutPassword.password_hash;
-
+      console.log(user)
       res.json({
         message: 'Login successful',
         token,
-        user: this.formatUserResponse(userWithoutPassword)
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          region: user.region,
+          avatar_url: user.avatar_url,
+          game_modes: user.game_modes,
+          mmr_rating: user.mmr_rating,
+          preferred_roles: user.preferred_roles,
+          about_me: user.about_me,
+          tags: user.tags,
+          is_searching: user.is_searching,
+          team_id: user.team_id,
+          last_online: user.last_online,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt
+        }
       });
     } catch (error) {
       next(error);
@@ -163,30 +135,31 @@ class AuthController {
     try {
       const user = req.user;
 
-      // Обновляем активность с серверным временем
-      await user.update({ 
-        last_online: sequelize.fn('NOW') 
-      });
-      
+      // Обновляем активность
+      await user.update({ last_online: new Date() });
       await onlineStatusService.updateUserActivity(user.id, {
         username: user.username,
         region: user.region
       });
 
-      // Получаем актуальные данные пользователя с командой
-      const currentUser = await User.findByPk(user.id, {
-        attributes: { exclude: ['password_hash'] },
-        include: [
-          {
-            model: Team,
-            as: 'team',
-            attributes: ['id', 'name', 'avatar_url', 'region']
-          }
-        ]
-      });
-
       res.json({
-        user: this.formatUserResponse(currentUser)
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          region: user.region,
+          avatar_url: user.avatar_url,
+          game_modes: user.game_modes,
+          mmr_rating: user.mmr_rating,
+          preferred_roles: user.preferred_roles,
+          about_me: user.about_me,
+          tags: user.tags,
+          is_searching: user.is_searching,
+          team_id: user.team_id,
+          last_online: user.last_online,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt
+        }
       });
     } catch (error) {
       next(error);
@@ -211,21 +184,17 @@ class AuthController {
       const user = req.user;
       const newToken = generateToken(user.id);
 
-      // Получаем актуальные данные пользователя с командой
-      const currentUser = await User.findByPk(user.id, {
-        attributes: { exclude: ['password_hash'] },
-        include: [
-          {
-            model: Team,
-            as: 'team',
-            attributes: ['id', 'name', 'avatar_url', 'region']
-          }
-        ]
-      });
-
       res.json({
         token: newToken,
-        user: this.formatUserResponse(currentUser)
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          region: user.region,
+          avatar_url: user.avatar_url,
+          is_searching: user.is_searching,
+          team_id: user.team_id
+        }
       });
     } catch (error) {
       next(error);
