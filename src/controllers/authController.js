@@ -104,7 +104,7 @@ class AuthController {
         username: user.username,
         region: user.region
       });
-      console.log(user)
+
       res.json({
         message: 'Login successful',
         token,
@@ -114,16 +114,9 @@ class AuthController {
           username: user.username,
           region: user.region,
           avatar_url: user.avatar_url,
-          game_modes: user.game_modes,
-          mmr_rating: user.mmr_rating,
-          preferred_roles: user.preferred_roles,
-          about_me: user.about_me,
-          tags: user.tags,
           is_searching: user.is_searching,
           team_id: user.team_id,
-          last_online: user.last_online,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt
+          last_online: user.last_online
         }
       });
     } catch (error) {
@@ -137,6 +130,8 @@ class AuthController {
 
       // Обновляем активность
       await user.update({ last_online: new Date() });
+      console.log(new Date().toISOString())
+      console.log(10)
       await onlineStatusService.updateUserActivity(user.id, {
         username: user.username,
         region: user.region
