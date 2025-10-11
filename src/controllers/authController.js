@@ -66,9 +66,16 @@ class AuthController {
           username: user.username,
           region: user.region,
           avatar_url: user.avatar_url,
+          game_modes: user.game_modes,
+          mmr_rating: user.mmr_rating,
+          preferred_roles: user.preferred_roles,
+          about_me: user.about_me,
+          tags: user.tags,
           is_searching: user.is_searching,
           team_id: user.team_id,
-          last_online: user.last_online
+          last_online: user.last_online,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt
         }
       });
     } catch (error) {
@@ -114,9 +121,16 @@ class AuthController {
           username: user.username,
           region: user.region,
           avatar_url: user.avatar_url,
+          game_modes: user.game_modes,
+          mmr_rating: user.mmr_rating,
+          preferred_roles: user.preferred_roles,
+          about_me: user.about_me,
+          tags: user.tags,
           is_searching: user.is_searching,
           team_id: user.team_id,
-          last_online: user.last_online
+          last_online: user.last_online,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt
         }
       });
     } catch (error) {
