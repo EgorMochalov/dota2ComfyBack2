@@ -23,14 +23,6 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING,
       allowNull: true
     },
-    avatar_data: {
-      type: DataTypes.TEXT, // Для хранения Base64
-      allowNull: true
-    },
-    avatar_mimetype: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
     captain_id: {
       type: DataTypes.UUID,
       allowNull: false,

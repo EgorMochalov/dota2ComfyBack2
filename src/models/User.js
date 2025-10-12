@@ -33,14 +33,6 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING,
       allowNull: true
     },
-    avatar_data: {
-      type: DataTypes.TEXT, // Для хранения Base64
-      allowNull: true
-    },
-    avatar_mimetype: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
     region: {
       type: DataTypes.ENUM(
         'eu_west', 'eu_east', 'us_west', 'us_east', 
