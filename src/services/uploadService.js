@@ -2,6 +2,7 @@
 const multer = require('multer');
 const yandexStorageService = require('./yandexStorageService');
 const fileUtils = require('../utils/fileUtils');
+const { User, Team } = require('../models');
 
 class UploadService {
   constructor() {
