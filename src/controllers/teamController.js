@@ -385,6 +385,8 @@ class TeamController {
 
       const avatarUrl = await uploadService.uploadTeamAvatar(teamId, req.file, captainId);
 
+      await redisClient.del(`team:${teamId}`);
+
       res.json({
         message: 'Team avatar uploaded successfully',
         avatar_url: avatarUrl
