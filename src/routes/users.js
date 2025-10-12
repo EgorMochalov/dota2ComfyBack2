@@ -28,7 +28,7 @@ router.put('/search-status',
 router.post('/avatar',
   authMiddleware,
   apiRateLimit,
-  uploadService.getSingleUploadMiddleware(),
+  uploadService.getMulterConfig().single('avatar'),
   uploadService.handleUploadError,
   userController.uploadAvatar
 );

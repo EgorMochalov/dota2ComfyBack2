@@ -33,7 +33,7 @@ class UserController {
       }
 
       const user = await User.findByPk(userId, {
-        attributes: { exclude: ['password_hash'] },
+        attributes: { exclude: ['password_hash', 'avatar_data'] },
         include: [
           {
             model: Team,

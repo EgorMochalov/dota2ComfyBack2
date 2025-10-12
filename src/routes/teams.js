@@ -63,7 +63,7 @@ router.put('/:teamId/scrim-status',
 router.post('/:teamId/avatar',
   authMiddleware,
   apiRateLimit,
-  uploadService.getSingleUploadMiddleware(),
+  uploadService.getMulterConfig().single('avatar'),
   uploadService.handleUploadError,
   teamController.uploadTeamAvatar
 );

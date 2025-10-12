@@ -1,80 +1,43 @@
-// services/uploadService.js
-const multer = require('multer');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
-const config = require('../config/config');
-const fileUtils = require('../utils/fileUtils');
-const redisClient = require('../config/redis');
+// services/uploadService.js - ПОЛНОСТЬЮ ПЕРЕРАБОТАННЫЙ
 const { User, Team } = require('../models');
 
 class UploadService {
-  constructor() {
-    this.storage = this.initStorage();
-    this.upload = this.initMulter();
-  }
-
-  initStorage() {
-    return multer.diskStorage({
-      destination: async (req, file, cb) => {
-        await fileUtils.ensureUploadDir();
-        cb(null, config.upload.uploadPath);
-      },
-      filename: (req, file, cb) => {
-        const filename = fileUtils.generateFileName(file.originalname);
-        cb(null, filename);
-      }
-    });
-  }
-
-  initMulter() {
-    return multer({
-      storage: this.storage,
-      limits: {
-        fileSize: config.upload.maxFileSize
-      },
-      fileFilter: (req, file, cb) => {
-        if (fileUtils.isValidImageType(file.mimetype)) {
-          cb(null, true);
-        } else {
-          cb(new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed.'));
-        }
-      }
-    });
-  }
-
-  // Загрузка аватарки пользователя
+  // Загрузка аватарки пользователя как Base64
   async uploadUserAvatar(userId, file) {
     try {
+      if (!file) {
+        throw new Error('No file provided');
+      }
+
       const user = await User.findByPk(userId);
       if (!user) {
         throw new Error('User not found');
       }
 
-      // Удаляем старый аватар если есть
-      if (user.avatar_url) {
-        await this.deleteOldAvatar(user.avatar_url);
-      }
+      // Читаем файл как Base64
+      const avatarData = file.buffer.toString('base64');
+      const mimetype = file.mimetype;
 
-      // Сохраняем новый аватар
-      const avatarUrl = `/uploads/${file.filename}`;
-      await user.update({ avatar_url: avatarUrl });
+      // Обновляем пользователя
+      await user.update({
+        avatar_data: avatarData,
+        avatar_mimetype: mimetype,
+        avatar_url: `data:${mimetype};base64,${avatarData}` // Data URL для фронтенда
+      });
 
-      // Инвалидируем кэш
-      await redisClient.del(`user:${userId}`);
-
-      return avatarUrl;
+      return user.avatar_url;
     } catch (error) {
-      // Удаляем загруженный файл в случае ошибки
-      if (file && file.path) {
-        await fileUtils.deleteFile(file.path);
-      }
       throw error;
     }
   }
 
-  // Загрузка аватарки команды
+  // Загрузка аватарки команды как Base64
   async uploadTeamAvatar(teamId, file, captainId) {
     try {
+      if (!file) {
+        throw new Error('No file provided');
+      }
+
       const team = await Team.findByPk(teamId);
       if (!team) {
         throw new Error('Team not found');
@@ -85,43 +48,40 @@ class UploadService {
         throw new Error('Only team captain can upload team avatar');
       }
 
-      // Удаляем старый аватар если есть
-      if (team.avatar_url) {
-        await this.deleteOldAvatar(team.avatar_url);
-      }
+      // Читаем файл как Base64
+      const avatarData = file.buffer.toString('base64');
+      const mimetype = file.mimetype;
 
-      // Сохраняем новый аватар
-      const avatarUrl = `/uploads/${file.filename}`;
-      await team.update({ avatar_url: avatarUrl });
+      // Обновляем команду
+      await team.update({
+        avatar_data: avatarData,
+        avatar_mimetype: mimetype,
+        avatar_url: `data:${mimetype};base64,${avatarData}` // Data URL для фронтенда
+      });
 
-      // Инвалидируем кэш
-      await redisClient.del(`team:${teamId}`);
-
-      return avatarUrl;
+      return team.avatar_url;
     } catch (error) {
-      // Удаляем загруженный файл в случае ошибки
-      if (file && file.path) {
-        await fileUtils.deleteFile(file.path);
-      }
       throw error;
     }
   }
 
-  async deleteOldAvatar(avatarUrl) {
-    try {
-      if (avatarUrl && avatarUrl.startsWith('/uploads/')) {
-        const filename = path.basename(avatarUrl);
-        const filePath = path.join(config.upload.uploadPath, filename);
-        await fileUtils.deleteFile(filePath);
+  // Middleware для multer (память вместо диска)
+  getMulterConfig() {
+    const multer = require('multer');
+    
+    return multer({
+      storage: multer.memoryStorage(), // Храним в памяти, потом конвертируем в Base64
+      limits: {
+        fileSize: 2 * 1024 * 1024, // 2MB максимум
+      },
+      fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+          cb(null, true);
+        } else {
+          cb(new Error('Only image files are allowed'), false);
+        }
       }
-    } catch (error) {
-      console.error('Error deleting old avatar:', error);
-    }
-  }
-
-  // Получение middleware для загрузки одного файла
-  getSingleUploadMiddleware(fieldName = 'avatar') {
-    return this.upload.single(fieldName);
+    });
   }
 
   // Middleware для обработки ошибок загрузки
@@ -130,22 +90,15 @@ class UploadService {
       if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({
           error: 'File too large',
-          message: 'File size must be less than 5MB'
-        });
-      }
-      
-      if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-        return res.status(400).json({
-          error: 'Invalid file',
-          message: 'Unexpected file field'
+          message: 'File size must be less than 2MB'
         });
       }
     }
     
-    if (err.message.includes('Invalid file type')) {
+    if (err.message.includes('Only image files')) {
       return res.status(400).json({
         error: 'Invalid file type',
-        message: 'Only JPEG, PNG, and WebP images are allowed'
+        message: 'Only image files are allowed'
       });
     }
 
