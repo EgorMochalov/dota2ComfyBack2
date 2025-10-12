@@ -33,6 +33,12 @@ router.post('/avatar',
   userController.uploadAvatar
 );
 
+router.post('/avatar/confirm',
+  authMiddleware,
+  apiRateLimit,
+  userController.confirmAvatarUpload
+);
+
 router.get('/search',
   authMiddleware,
   apiRateLimit,

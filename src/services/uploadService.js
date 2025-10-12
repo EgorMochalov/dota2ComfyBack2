@@ -9,38 +9,38 @@ const { User, Team } = require('../models');
 
 class UploadService {
   constructor() {
-    this.storage = this.initStorage();
-    this.upload = this.initMulter();
+    // this.storage = this.initStorage();
+    // this.upload = this.initMulter();
   }
 
-  initStorage() {
-    return multer.diskStorage({
-      destination: async (req, file, cb) => {
-        await fileUtils.ensureUploadDir();
-        cb(null, config.upload.uploadPath);
-      },
-      filename: (req, file, cb) => {
-        const filename = fileUtils.generateFileName(file.originalname);
-        cb(null, filename);
-      }
-    });
-  }
+  // initStorage() {
+  //   return multer.diskStorage({
+  //     destination: async (req, file, cb) => {
+  //       await fileUtils.ensureUploadDir();
+  //       cb(null, config.upload.uploadPath);
+  //     },
+  //     filename: (req, file, cb) => {
+  //       const filename = fileUtils.generateFileName(file.originalname);
+  //       cb(null, filename);
+  //     }
+  //   });
+  // }
 
-  initMulter() {
-    return multer({
-      storage: this.storage,
-      limits: {
-        fileSize: config.upload.maxFileSize
-      },
-      fileFilter: (req, file, cb) => {
-        if (fileUtils.isValidImageType(file.mimetype)) {
-          cb(null, true);
-        } else {
-          cb(new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed.'));
-        }
-      }
-    });
-  }
+  // initMulter() {
+  //   return multer({
+  //     storage: this.storage,
+  //     limits: {
+  //       fileSize: config.upload.maxFileSize
+  //     },
+  //     fileFilter: (req, file, cb) => {
+  //       if (fileUtils.isValidImageType(file.mimetype)) {
+  //         cb(null, true);
+  //       } else {
+  //         cb(new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed.'));
+  //       }
+  //     }
+  //   });
+  // }
 
   // Загрузка аватарки пользователя
   async uploadUserAvatar(userId, file) {
@@ -55,19 +55,30 @@ class UploadService {
         await this.deleteOldAvatar(user.avatar_url);
       }
 
-      // Сохраняем новый аватар
-      const avatarUrl = `/uploads/${file.filename}`;
-      await user.update({ avatar_url: avatarUrl });
+      // Генерируем уникальное имя файла
+      const fileName = yandexStorageService.generateFileName(
+        file.originalname, 
+        'user-avatars'
+      );
+
+      // Получаем URL для загрузки
+      const { uploadUrl, publicUrl } = await yandexStorageService.generateUploadUrl(
+        fileName,
+        file.mimetype
+      );
+
+      // Загружаем файл напрямую из фронтенда в Yandex Cloud
+      // Фронтенд получит uploadUrl и загрузит файл напрямую
+
+      // Сохраняем publicUrl в базу данных
+      await user.update({ avatar_url: publicUrl });
 
       // Инвалидируем кэш
       await redisClient.del(`user:${userId}`);
 
-      return avatarUrl;
+      return publicUrl;
     } catch (error) {
-      // Удаляем загруженный файл в случае ошибки
-      if (file && file.path) {
-        await fileUtils.deleteFile(file.path);
-      }
+      console.error('Error uploading user avatar:', error);
       throw error;
     }
   }
@@ -80,7 +91,6 @@ class UploadService {
         throw new Error('Team not found');
       }
 
-      // Проверяем права
       if (team.captain_id !== captainId) {
         throw new Error('Only team captain can upload team avatar');
       }
@@ -90,32 +100,58 @@ class UploadService {
         await this.deleteOldAvatar(team.avatar_url);
       }
 
-      // Сохраняем новый аватар
-      const avatarUrl = `/uploads/${file.filename}`;
-      await team.update({ avatar_url: avatarUrl });
+      const fileName = yandexStorageService.generateFileName(
+        file.originalname,
+        'team-avatars'
+      );
 
-      // Инвалидируем кэш
+      const { uploadUrl, publicUrl } = await yandexStorageService.generateUploadUrl(
+        fileName,
+        file.mimetype
+      );
+
+      await team.update({ avatar_url: publicUrl });
       await redisClient.del(`team:${teamId}`);
 
-      return avatarUrl;
+      return publicUrl;
     } catch (error) {
-      // Удаляем загруженный файл в случае ошибки
-      if (file && file.path) {
-        await fileUtils.deleteFile(file.path);
-      }
+      console.error('Error uploading team avatar:', error);
       throw error;
     }
   }
 
   async deleteOldAvatar(avatarUrl) {
     try {
-      if (avatarUrl && avatarUrl.startsWith('/uploads/')) {
-        const filename = path.basename(avatarUrl);
-        const filePath = path.join(config.upload.uploadPath, filename);
-        await fileUtils.deleteFile(filePath);
+      if (avatarUrl && avatarUrl.includes('storage.yandexcloud.net')) {
+        // Извлекаем ключ файла из URL
+        const urlParts = avatarUrl.split('/');
+        const key = urlParts.slice(3).join('/'); // Убираем https://storage.yandexcloud.net/bucket-name/
+        
+        await yandexStorageService.deleteFile(key);
       }
     } catch (error) {
       console.error('Error deleting old avatar:', error);
+    }
+  }
+
+  async getDirectUploadUrl(userId, originalName, fileType) {
+    try {
+      const prefix = fileType === 'user' ? 'user-avatars' : 'team-avatars';
+      const fileName = yandexStorageService.generateFileName(originalName, prefix);
+
+      const { uploadUrl, publicUrl } = await yandexStorageService.generateUploadUrl(
+        fileName,
+        'image/jpeg' // или определить из originalName
+      );
+
+      return {
+        upload_url: uploadUrl,
+        public_url: publicUrl,
+        file_name: fileName
+      };
+    } catch (error) {
+      console.error('Error getting direct upload URL:', error);
+      throw error;
     }
   }
 

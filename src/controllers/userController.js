@@ -179,17 +179,73 @@ class UserController {
 
   async uploadAvatar(req, res, next) {
     try {
-      if (!req.file) {
+      // Новый подход: возвращаем URL для прямой загрузки
+      const { originalname, mimetype } = req.file;
+      
+      const uploadData = await uploadService.getDirectUploadUrl(
+        req.user.id,
+        originalname,
+        'user'
+      );
+
+      // Сохраняем временную информацию о загрузке (можно в Redis)
+      await redisClient.set(
+        `upload:${req.user.id}:${uploadData.file_name}`,
+        JSON.stringify({
+          type: 'user',
+          userId: req.user.id,
+          fileName: uploadData.file_name,
+          publicUrl: uploadData.public_url
+        }),
+        3600 // 1 час
+      );
+
+      res.json({
+        message: 'Upload URL generated',
+        upload_url: uploadData.upload_url,
+        public_url: uploadData.public_url,
+        file_name: uploadData.file_name
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async confirmAvatarUpload(req, res, next) {
+    try {
+      const { file_name } = req.body;
+      
+      // Получаем информацию о загрузке из Redis
+      const uploadInfo = await redisClient.get(`upload:${req.user.id}:${file_name}`);
+      if (!uploadInfo) {
         return res.status(400).json({
-          error: 'No file uploaded'
+          error: 'Upload session expired or not found'
         });
       }
 
-      const avatarUrl = await uploadService.uploadUserAvatar(req.user.id, req.file);
+      const { type, userId, publicUrl } = JSON.parse(uploadInfo);
+
+      if (type === 'user') {
+        const user = await User.findByPk(userId);
+        if (!user) {
+          return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Удаляем старый аватар если есть
+        if (user.avatar_url) {
+          await uploadService.deleteOldAvatar(user.avatar_url);
+        }
+
+        await user.update({ avatar_url: publicUrl });
+        await redisClient.del(`user:${userId}`);
+        
+        // Удаляем временные данные
+        await redisClient.del(`upload:${req.user.id}:${file_name}`);
+      }
 
       res.json({
         message: 'Avatar uploaded successfully',
-        avatar_url: avatarUrl
+        avatar_url: publicUrl
       });
     } catch (error) {
       next(error);
