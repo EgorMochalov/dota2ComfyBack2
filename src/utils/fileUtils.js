@@ -1,24 +1,14 @@
-// utils/fileUtils.js
-const fs = require('fs').promises;
-const path = require('path');
+// utils/fileUtils.js - ОБНОВЛЕННЫЙ
 const config = require('../config/config');
 
 const ensureUploadDir = async () => {
-  try {
-    await fs.access(config.upload.uploadPath);
-  } catch (error) {
-    await fs.mkdir(config.upload.uploadPath, { recursive: true });
-  }
+  // Больше не нужно создавать локальную директорию
+  return true;
 };
 
 const deleteFile = async (filePath) => {
-  try {
-    await fs.unlink(filePath);
-    return true;
-  } catch (error) {
-    console.error('Error deleting file:', error);
-    return false;
-  }
+  // Больше не нужно удалять локальные файлы
+  return true;
 };
 
 const getFileExtension = (filename) => {

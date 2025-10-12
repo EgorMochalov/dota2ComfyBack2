@@ -181,6 +181,18 @@ const startServer = async () => {
       }
     }
 
+    try {
+      const yandexStorageService = require('./services/yandexStorageService');
+      const cloudConnected = await yandexStorageService.testConnection();
+      if (cloudConnected) {
+        console.log('✅ Yandex Cloud Storage connected');
+      } else {
+        console.warn('⚠️  Yandex Cloud Storage not available');
+      }
+    } catch (cloudError) {
+      console.warn('⚠️  Yandex Cloud Storage connection failed:', cloudError.message);
+    }
+
     if (!dbConnected) {
       throw new Error('Unable to connect to database after 5 attempts');
     }

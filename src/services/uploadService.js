@@ -1,36 +1,17 @@
-// services/uploadService.js
+// services/uploadService.js - ОБНОВЛЕННЫЙ
 const multer = require('multer');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
-const config = require('../config/config');
+const yandexStorageService = require('./yandexStorageService');
 const fileUtils = require('../utils/fileUtils');
-const redisClient = require('../config/redis');
-const { User, Team } = require('../models');
 
 class UploadService {
   constructor() {
-    this.storage = this.initStorage();
-    this.upload = this.initMulter();
-  }
-
-  initStorage() {
-    return multer.diskStorage({
-      destination: async (req, file, cb) => {
-        await fileUtils.ensureUploadDir();
-        cb(null, config.upload.uploadPath);
-      },
-      filename: (req, file, cb) => {
-        const filename = fileUtils.generateFileName(file.originalname);
-        cb(null, filename);
-      }
-    });
-  }
-
-  initMulter() {
-    return multer({
+    // Настраиваем multer для обработки файлов в памяти (не сохраняем на диск)
+    this.storage = multer.memoryStorage();
+    
+    this.upload = multer({
       storage: this.storage,
       limits: {
-        fileSize: config.upload.maxFileSize
+        fileSize: 5 * 1024 * 1024 // 5MB
       },
       fileFilter: (req, file, cb) => {
         if (fileUtils.isValidImageType(file.mimetype)) {
@@ -42,7 +23,7 @@ class UploadService {
     });
   }
 
-  // Загрузка аватарки пользователя
+  // Загрузка аватарки пользователя в Yandex Cloud
   async uploadUserAvatar(userId, file) {
     try {
       const user = await User.findByPk(userId);
@@ -55,24 +36,19 @@ class UploadService {
         await this.deleteOldAvatar(user.avatar_url);
       }
 
-      // Сохраняем новый аватар
-      const avatarUrl = `/uploads/${file.filename}`;
-      await user.update({ avatar_url: avatarUrl });
+      // Загружаем новый аватар в Yandex Cloud
+      const uploadResult = await yandexStorageService.uploadFile(file, 'users');
+      
+      // Сохраняем URL из Yandex Cloud
+      await user.update({ avatar_url: uploadResult.url });
 
-      // Инвалидируем кэш
-      await redisClient.del(`user:${userId}`);
-
-      return avatarUrl;
+      return uploadResult.url;
     } catch (error) {
-      // Удаляем загруженный файл в случае ошибки
-      if (file && file.path) {
-        await fileUtils.deleteFile(file.path);
-      }
       throw error;
     }
   }
 
-  // Загрузка аватарки команды
+  // Загрузка аватарки команды в Yandex Cloud
   async uploadTeamAvatar(teamId, file, captainId) {
     try {
       const team = await Team.findByPk(teamId);
@@ -90,32 +66,26 @@ class UploadService {
         await this.deleteOldAvatar(team.avatar_url);
       }
 
-      // Сохраняем новый аватар
-      const avatarUrl = `/uploads/${file.filename}`;
-      await team.update({ avatar_url: avatarUrl });
+      // Загружаем новый аватар в Yandex Cloud
+      const uploadResult = await yandexStorageService.uploadFile(file, 'teams');
+      
+      // Сохраняем URL из Yandex Cloud
+      await team.update({ avatar_url: uploadResult.url });
 
-      // Инвалидируем кэш
-      await redisClient.del(`team:${teamId}`);
-
-      return avatarUrl;
+      return uploadResult.url;
     } catch (error) {
-      // Удаляем загруженный файл в случае ошибки
-      if (file && file.path) {
-        await fileUtils.deleteFile(file.path);
-      }
       throw error;
     }
   }
 
+  // Удаление старого аватарка
   async deleteOldAvatar(avatarUrl) {
     try {
-      if (avatarUrl && avatarUrl.startsWith('/uploads/')) {
-        const filename = path.basename(avatarUrl);
-        const filePath = path.join(config.upload.uploadPath, filename);
-        await fileUtils.deleteFile(filePath);
+      if (avatarUrl && avatarUrl.includes('storage.yandexcloud.net')) {
+        await yandexStorageService.deleteFile(avatarUrl);
       }
     } catch (error) {
-      console.error('Error deleting old avatar:', error);
+      console.error('Error deleting old avatar from Yandex Cloud:', error);
     }
   }
 
