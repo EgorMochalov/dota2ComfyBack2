@@ -182,7 +182,7 @@ const startServer = async () => {
     }
 
     try {
-      const yandexStorageService = require('./services/yandexStorageService');
+      const yandexStorageService = require('./src/services/yandexStorageService');
       const cloudConnected = await yandexStorageService.testConnection();
       if (cloudConnected) {
         console.log('✅ Yandex Cloud Storage connected');
