@@ -200,7 +200,7 @@ const startServer = async () => {
         `);
         
         const usersTableExists = tableCheck[0][0].exists;
-        
+        await sequelize.sync({ force: false });
         if (!usersTableExists) {
           console.log('📋 Tables not found. Creating database structure...');
           
