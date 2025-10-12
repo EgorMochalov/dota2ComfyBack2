@@ -69,7 +69,7 @@ class UploadService {
 
       // Загружаем новый аватар в Yandex Cloud
       const uploadResult = await yandexStorageService.uploadFile(file, 'teams');
-      
+      console.log(uploadResult)
       // Сохраняем URL из Yandex Cloud
       await team.update({ avatar_url: uploadResult.url });
 
