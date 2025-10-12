@@ -34,7 +34,7 @@ module.exports = (sequelize) => {
       allowNull: true
     },
     avatar_data: {
-      type: DataTypes.TEXT('long'), // Для хранения Base64
+      type: DataTypes.TEXT, // Для хранения Base64
       allowNull: true
     },
     avatar_mimetype: {
